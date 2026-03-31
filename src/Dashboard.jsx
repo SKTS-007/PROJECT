@@ -20,12 +20,16 @@ function Dashboard({ onLogout }) {
            setIsLoading(false);
         }
       } catch (err) {
-         console.error('Failed to fetch from MySQL API:', err);
+         console.error('Failed to fetch from API:', err);
          setIsLoading(false);
       }
     };
 
     fetchPlayers();
+    
+    // Poll the backend every 3.5 seconds to view the live morale simulation updates!
+    const pollInterval = setInterval(fetchPlayers, 3500);
+    return () => clearInterval(pollInterval);
   }, []);
 
   const movePlayer = async (id, targetList) => {
