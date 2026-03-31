@@ -7,46 +7,58 @@ function Dashboard({ onLogout }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: '', position: 'Forward', jersey_number: '' });
 
-  // Mock data perfectly mirroring Phase 1 SQL insertions
-  const MOCK_DB_DATA = [
-    { player_id: 1, name: 'Marcus Sterling', position: 'Forward', jersey_number: 9, fitness_status: 'Match Fit', morale_rating: 9 },
-    { player_id: 2, name: 'Julian Alvarez', position: 'Forward', jersey_number: 11, fitness_status: 'Injured', morale_rating: 4 },
-    { player_id: 3, name: 'Kevin De Silva', position: 'Midfielder', jersey_number: 10, fitness_status: 'Match Fit', morale_rating: 8 },
-    { player_id: 4, name: 'Enzo Fernandez', position: 'Midfielder', jersey_number: 8, fitness_status: 'Suspended', morale_rating: 5 },
-    { player_id: 5, name: 'Virgil Van Berg', position: 'Defender', jersey_number: 4, fitness_status: 'Match Fit', morale_rating: 10 },
-    { player_id: 6, name: 'Ruben Dias', position: 'Defender', jersey_number: 3, fitness_status: 'In Rehab', morale_rating: 6 },
-    { player_id: 7, name: 'Trent James', position: 'Defender', jersey_number: 66, fitness_status: 'Match Fit', morale_rating: 7 },
-    { player_id: 8, name: 'Alisson Ederson', position: 'Goalkeeper', jersey_number: 1, fitness_status: 'Match Fit', morale_rating: 9 },
-  ];
-
   useEffect(() => {
-    // Simulating an API fetch operation
-    const fetchPlayers = () => {
-      setTimeout(() => {
-        // Initialize all players in the 'pool' list
-        const initialPlayers = MOCK_DB_DATA.map(p => ({ ...p, list: 'pool' }));
-        setPlayers(initialPlayers);
-        setIsLoading(false);
-      }, 800);
+    const fetchPlayers = async () => {
+      try {
+        const response = await fetch('/api/players');
+        if (response.ok) {
+           const data = await response.json();
+           setPlayers(data);
+           setIsLoading(false);
+        } else {
+           // Fallback to empty array if DB lacks tables
+           setIsLoading(false);
+        }
+      } catch (err) {
+         console.error('Failed to fetch from MySQL API:', err);
+         setIsLoading(false);
+      }
     };
 
     fetchPlayers();
   }, []);
 
-  const movePlayer = (id, targetList) => {
+  const movePlayer = async (id, targetList) => {
+    // Optimistic UI update
     setPlayers(players.map(p => p.player_id === id ? { ...p, list: targetList } : p));
+    
+    try {
+      await fetch(`/api/players/${id}/move`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetList })
+      });
+    } catch (err) {
+      console.error("Failed to move player in DB:", err);
+    }
   };
 
-  const restPlayer = (id) => {
+  const restPlayer = async (id) => {
+    // Optimistic UI update for resting
     setPlayers(players.map(p => p.player_id === id ? { ...p, fitness_status: 'Match Fit', morale_rating: 10 } : p));
+    
+    try {
+      await fetch(`/api/players/${id}/rest`, { method: 'PUT' });
+    } catch (err) {
+      console.error("Failed to rest player in DB:", err);
+    }
   };
 
-  const handleAddPlayer = (e) => {
+  const handleAddPlayer = async (e) => {
     e.preventDefault();
     if (!newPlayer.name || !newPlayer.jersey_number) return;
     
     const playerToAdd = {
-      player_id: Date.now(), // Generate mock ID
       name: newPlayer.name,
       position: newPlayer.position,
       jersey_number: parseInt(newPlayer.jersey_number) || 0,
@@ -55,9 +67,22 @@ function Dashboard({ onLogout }) {
       list: 'pool'
     };
     
-    setPlayers([...players, playerToAdd]);
-    setNewPlayer({ name: '', position: 'Forward', jersey_number: '' });
-    setShowAddForm(false);
+    try {
+       const res = await fetch('/api/players', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify(playerToAdd)
+       });
+       const data = await res.json();
+       if (data.success) {
+           playerToAdd.player_id = data.insertId;
+           setPlayers([...players, playerToAdd]);
+           setNewPlayer({ name: '', position: 'Forward', jersey_number: '' });
+           setShowAddForm(false);
+       }
+    } catch (err) {
+       console.error("Failed to add to database:", err);
+    }
   };
 
   const getFitnessBadgeColor = (status) => {
@@ -73,8 +98,8 @@ function Dashboard({ onLogout }) {
   const currentPlayers = players.filter(p => p.list === activeTab);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-slate-900 text-white shadow-md">
+    <div className="min-h-screen bg-cover bg-center bg-fixed" style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url('/pitch-bg.jpg')" }}>
+      <nav className="bg-slate-900/90 backdrop-blur text-white shadow-md border-b border-white/10">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -93,8 +118,8 @@ function Dashboard({ onLogout }) {
       <main className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="mb-6 sm:flex sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Squad Management</h1>
-            <p className="mt-1 text-sm text-gray-500">Organize your first team, resting players, and view retirees.</p>
+            <h1 className="text-3xl font-extrabold text-white drop-shadow-md">Squad Management</h1>
+            <p className="mt-1 text-sm text-gray-200">Organize your first team, resting players, and view retirees.</p>
           </div>
           <div className="mt-4 sm:mt-0">
              <button onClick={() => setShowAddForm(!showAddForm)} className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition">
@@ -134,22 +159,22 @@ function Dashboard({ onLogout }) {
         )}
 
         {/* Tab Navigation */}
-        <div className="flex space-x-6 border-b border-gray-200 mb-8 overflow-x-auto">
+        <div className="flex space-x-6 border-b border-white/20 mb-8 overflow-x-auto">
           <button 
             onClick={() => setActiveTab('pool')} 
-            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'pool' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'pool' ? 'border-green-400 text-green-400 drop-shadow' : 'border-transparent text-gray-300 hover:text-white hover:border-white/50'}`}
           >
             Available Pool ({players.filter(p => p.list === 'pool').length})
           </button>
           <button 
             onClick={() => setActiveTab('team')} 
-            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'team' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'team' ? 'border-green-400 text-green-400 drop-shadow' : 'border-transparent text-gray-300 hover:text-white hover:border-white/50'}`}
           >
             Current Team Members ({players.filter(p => p.list === 'team').length})
           </button>
           <button 
             onClick={() => setActiveTab('retired')} 
-            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'retired' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'retired' ? 'border-green-400 text-green-400 drop-shadow' : 'border-transparent text-gray-300 hover:text-white hover:border-white/50'}`}
           >
             Retired Players ({players.filter(p => p.list === 'retired').length})
           </button>

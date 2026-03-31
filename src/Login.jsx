@@ -5,19 +5,25 @@ function Login({ onLoginSuccess }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     
-    // In a real app, this would be an API call to authenticate the user:
-    // axios.post('/api/login', { username, password })
-    //   .then(response => onLoginSuccess())
-    //   .catch(err => setError('Invalid credentials'));
-
-    if (username === 'manager_1' && password === 'password123') {
-      setError('');
-      onLoginSuccess();
-    } else {
-      setError('Invalid Username or Password. Please try again.');
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setError('');
+        onLoginSuccess();
+      } else {
+        setError(data.error || 'Invalid Username or Password. Please try again.');
+      }
+    } catch (err) {
+      setError('Connection to backend server failed. Make sure server is running.');
     }
   };
 

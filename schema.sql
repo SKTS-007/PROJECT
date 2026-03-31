@@ -3,21 +3,22 @@
 -- ==========================================
 
 -- Create the managers table for authentication
-CREATE TABLE managers (
-    manager_id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS managers (
+    manager_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100) NOT NULL
 );
 
 -- Create the players table
-CREATE TABLE players (
-    player_id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS players (
+    player_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    position VARCHAR(50) CHECK (position IN ('Forward', 'Midfielder', 'Defender', 'Goalkeeper')),
+    position ENUM('Forward', 'Midfielder', 'Defender', 'Goalkeeper') NOT NULL,
     jersey_number INT NOT NULL,
-    fitness_status VARCHAR(50) CHECK (fitness_status IN ('Match Fit', 'Injured', 'Suspended', 'In Rehab')),
-    morale_rating INT CHECK (morale_rating >= 1 AND morale_rating <= 10)
+    fitness_status ENUM('Match Fit', 'Injured', 'Suspended', 'In Rehab') NOT NULL,
+    morale_rating INT CHECK (morale_rating >= 1 AND morale_rating <= 10),
+    list_status ENUM('pool', 'team', 'retired') DEFAULT 'pool'
 );
 
 -- ==========================================
