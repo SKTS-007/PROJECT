@@ -4,6 +4,8 @@ function Dashboard({ onLogout }) {
   const [players, setPlayers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pool'); // 'pool', 'team', 'retired'
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newPlayer, setNewPlayer] = useState({ name: '', position: 'Forward', jersey_number: '' });
 
   // Mock data perfectly mirroring Phase 1 SQL insertions
   const MOCK_DB_DATA = [
@@ -37,6 +39,25 @@ function Dashboard({ onLogout }) {
 
   const restPlayer = (id) => {
     setPlayers(players.map(p => p.player_id === id ? { ...p, fitness_status: 'Match Fit', morale_rating: 10 } : p));
+  };
+
+  const handleAddPlayer = (e) => {
+    e.preventDefault();
+    if (!newPlayer.name || !newPlayer.jersey_number) return;
+    
+    const playerToAdd = {
+      player_id: Date.now(), // Generate mock ID
+      name: newPlayer.name,
+      position: newPlayer.position,
+      jersey_number: parseInt(newPlayer.jersey_number) || 0,
+      fitness_status: 'Match Fit',
+      morale_rating: 10,
+      list: 'pool'
+    };
+    
+    setPlayers([...players, playerToAdd]);
+    setNewPlayer({ name: '', position: 'Forward', jersey_number: '' });
+    setShowAddForm(false);
   };
 
   const getFitnessBadgeColor = (status) => {
@@ -75,7 +96,42 @@ function Dashboard({ onLogout }) {
             <h1 className="text-2xl font-bold text-gray-900">Squad Management</h1>
             <p className="mt-1 text-sm text-gray-500">Organize your first team, resting players, and view retirees.</p>
           </div>
+          <div className="mt-4 sm:mt-0">
+             <button onClick={() => setShowAddForm(!showAddForm)} className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition">
+               {showAddForm ? 'Cancel' : 'Add New Player'}
+             </button>
+          </div>
         </div>
+
+        {showAddForm && (
+          <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 shadow-sm animate-fade-in">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Add New Player to Pool</h2>
+            <form onSubmit={handleAddPlayer} className="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
+              <div className="sm:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Player Name</label>
+                <input required type="text" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Lionel Messi" />
+              </div>
+              <div className="sm:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                <select value={newPlayer.position} onChange={e => setNewPlayer({...newPlayer, position: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                  <option>Forward</option>
+                  <option>Midfielder</option>
+                  <option>Defender</option>
+                  <option>Goalkeeper</option>
+                </select>
+              </div>
+              <div className="sm:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
+                <input required type="number" min="1" max="99" value={newPlayer.jersey_number} onChange={e => setNewPlayer({...newPlayer, jersey_number: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. 10" />
+              </div>
+              <div className="sm:col-span-1">
+                <button type="submit" className="w-full px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-md shadow-sm font-medium transition cursor-pointer">
+                   Save Player
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex space-x-6 border-b border-gray-200 mb-8 overflow-x-auto">
