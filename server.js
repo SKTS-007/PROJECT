@@ -21,6 +21,8 @@ function startSimulation() {
     simulationTick++;
     try {
       const players = await db.all("SELECT * FROM members WHERE role = 'Player'");
+      let teamCount = players.filter(p => p.list_status === 'team').length;
+
       for (const p of players) {
         let currentMorale = p.morale_rating || 5;
         let currentList = p.list_status || 'pool'; 
@@ -30,7 +32,7 @@ function startSimulation() {
         if (currentList === 'pool') {
           newMorale -= 1; // Pool players lose morale normally
         } else if (currentList === 'team') {
-          if (simulationTick % 3 === 0) { // Slower decrease (every 3rd tick ~15s)
+          if (simulationTick % 3 === 0) { // Slower decrease
             newMorale -= 1;
           }
         } else if (currentList === 'retired') {
@@ -41,16 +43,22 @@ function startSimulation() {
         if (newMorale > 10) newMorale = 10;
         if (newMorale < 1) newMorale = 1;
 
-        // Auto-transfer logic on extremum
+        // Auto-transfer logic on extremum limits
         if (newMorale === 10 && currentList !== 'team') {
-          newList = 'team'; // Ready to play! Add to team.
+          if (teamCount < 11) {
+            newList = 'team'; // Ready to play and there is space!
+            teamCount++;
+          } else {
+            newList = 'pool'; // Team is full, wait in the available pool queue
+          }
         } else if (newMorale === 1 && currentList !== 'retired') {
           newList = 'retired'; // Complete burnout. Player retires.
+          if (currentList === 'team') teamCount--;
         }
 
         if (newMorale !== currentMorale || newList !== currentList) {
-          // If shifting to team via morale recovery, enforce match fit status natively.
-          const fitnessQuery = (newList === 'team' && currentList === 'retired') ? ", fitness_status = 'Match Fit'" : "";
+          // If returning from retirement or resting to team/pool, ensure match fit.
+          const fitnessQuery = (newMorale === 10) ? ", fitness_status = 'Match Fit'" : "";
           await db.run(`UPDATE members SET morale_rating = ?, list_status = ? ${fitnessQuery} WHERE id = ?`, [newMorale, newList, p.id]);
         }
       }
@@ -62,10 +70,10 @@ function startSimulation() {
 
 // Initialize SQLite database
 async function initDB() {
-  const dbExists = fs.existsSync('./football_manager_v2.db');
+  const dbExists = fs.existsSync('./football_manager_v3.db');
   
   db = await open({
-    filename: './football_manager_v2.db', // Use v2 to bypass the old schema tables
+    filename: './football_manager_v3.db', // Use v3 to force seed the new 18 players
     driver: sqlite3.Database
   });
 
@@ -105,7 +113,17 @@ async function initDB() {
       ['Virgil Van Berg', 'Defender', 4, 'Match Fit', 10],
       ['Ruben Dias', 'Defender', 3, 'In Rehab', 6],
       ['Trent James', 'Defender', 66, 'Match Fit', 7],
-      ['Alisson Ederson', 'Goalkeeper', 1, 'Match Fit', 9]
+      ['Alisson Ederson', 'Goalkeeper', 1, 'Match Fit', 9],
+      ['Lionel Andreas', 'Forward', 10, 'Match Fit', 9],
+      ['Donatello Mbappe', 'Forward', 7, 'Injured', 3],
+      ['Luka Modrick', 'Midfielder', 10, 'Match Fit', 8],
+      ['Jude Belling', 'Midfielder', 5, 'Match Fit', 7],
+      ['Harry Kaner', 'Forward', 9, 'Suspended', 5],
+      ['Bukayo Saka', 'Forward', 77, 'Match Fit', 8],
+      ['Kyle Walker', 'Defender', 2, 'Match Fit', 7],
+      ['Rodri Hernandez', 'Midfielder', 16, 'In Rehab', 6],
+      ['Erling Haaland', 'Forward', 9, 'Match Fit', 9],
+      ['Givardiol Yosko', 'Defender', 24, 'Match Fit', 8]
     ];
 
     // Insert players with dependency on the manager (manager_id set to managerId)

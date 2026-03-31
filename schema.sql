@@ -24,7 +24,17 @@ INSERT INTO members (role, name, position, jersey_number, fitness_status, morale
 ('Player', 'Virgil Van Berg', 'Defender', 4, 'Match Fit', 10, 1),
 ('Player', 'Ruben Dias', 'Defender', 3, 'In Rehab', 6, 1),
 ('Player', 'Trent James', 'Defender', 66, 'Match Fit', 7, 1),
-('Player', 'Alisson Ederson', 'Goalkeeper', 1, 'Match Fit', 9, 1);
+('Player', 'Alisson Ederson', 'Goalkeeper', 1, 'Match Fit', 9, 1),
+('Player', 'Lionel Andreas', 'Forward', 10, 'Match Fit', 9, 1),
+('Player', 'Donatello Mbappe', 'Forward', 7, 'Injured', 3, 1),
+('Player', 'Luka Modrick', 'Midfielder', 10, 'Match Fit', 8, 1),
+('Player', 'Jude Belling', 'Midfielder', 5, 'Match Fit', 7, 1),
+('Player', 'Harry Kaner', 'Forward', 9, 'Suspended', 5, 1),
+('Player', 'Bukayo Saka', 'Forward', 77, 'Match Fit', 8, 1),
+('Player', 'Kyle Walker', 'Defender', 2, 'Match Fit', 7, 1),
+('Player', 'Rodri Hernandez', 'Midfielder', 16, 'In Rehab', 6, 1),
+('Player', 'Erling Haaland', 'Forward', 9, 'Match Fit', 9, 1),
+('Player', 'Givardiol Yosko', 'Defender', 24, 'Match Fit', 8, 1);
 
 SELECT id as manager_id, username, name FROM members WHERE role = 'Manager' LIMIT 1;
 
